@@ -37,11 +37,16 @@ cloudinary.config(
 )
 
 app = FastAPI()
-router = APIRouter()
+router = APIRouter(prefix="/api")
 
 @router.get("/health")
 async def health_check():
-    return {"status": "ok", "message": "Backend is running on Vercel"}
+    return {"status": "ok", "message": "Backend is running on Vercel via /api/health"}
+
+# Debug catch-all to see what path is actually arriving
+@app.api_route("/{full_path:path}", methods=["GET", "POST", "PATCH", "DELETE", "PUT"])
+async def catch_all(request: Request, full_path: str):
+    return {"detail": "Not Found", "received_path": f"/{full_path}", "method": request.method}
 
 
 # Mount uploads directory safely (Vercel is read-only)
