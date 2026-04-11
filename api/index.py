@@ -247,9 +247,12 @@ if os.path.exists("assets"):
 # Enable CORS
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=False, allow_methods=["*"], allow_headers=["*"])
 
-# CATCH-ALL FOR REACT FRONTEND (MUST BE AT THE VERY END)
+# CATCH-ALL FOR REACT FRONTEND
 @app.get("/{full_path:path}")
 async def serve_react(full_path: str):
-    # If the file exists physically (like assets/...), StaticFiles would handle it
-    # Otherwise, return index.html for React routing
-    return FileResponse("index.html")
+    if os.path.exists("index.html"):
+        return FileResponse("index.html")
+    return JSONResponse(
+        status_code=404,
+        content={"detail": "Website files not found on server. Please check the build logs."}
+    )
