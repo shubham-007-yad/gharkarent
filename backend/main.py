@@ -27,7 +27,7 @@ cloudinary.config(
   secure = True
 )
 
-app = FastAPI()
+app = FastAPI(root_path="/api")
 
 # Mount uploads directory to serve files
 if not os.path.exists("uploads"):
