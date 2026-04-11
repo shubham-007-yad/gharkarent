@@ -25,13 +25,18 @@ import {
   MessageSquare,
   Share2,
   FileText,
-  AlertTriangle
+  AlertTriangle,
+  StickyNote,
+  Edit2,
+  Trash2,
+  Download,
+  Menu
 } from 'lucide-react'
 import DatePicker from "react-datepicker"
 import "react-datepicker/dist/react-datepicker.css"
 import './App.css'
 
-const API_BASE = 'http://localhost:8000'
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
 const MONTHS = [
   "January", "February", "March", "April", "May", "June", 
@@ -43,6 +48,7 @@ const YEARS = [2022, 2023, 2024, 2025, 2026]
 function App() {
   const [loading, setLoading] = useState(false)
   const [token, setToken] = useState(localStorage.getItem('token'))
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   const [tenants, setTenants] = useState([])
   const [newTenant, setNewTenant] = useState({ 
     name: '', 
@@ -56,6 +62,14 @@ function App() {
   })
   const [selectedTenant, setSelectedTenant] = useState(null)
   const [view, setView] = useState('dashboard') 
+  const [filterStatus, setFilterStatus] = useState('All')
+  const [minRent, setMinRent] = useState('')
+  const [maxRent, setMaxRent] = useState('')
+  const [notes, setNotes] = useState([])
+  const [noteData, setNoteData] = useState({ title: '', content: '', category: 'General' })
+  const [showNoteModal, setShowNoteModal] = useState(false)
+  const [editingNote, setEditingNote] = useState(null)
+  const [activeNoteCategory, setActiveNoteCategory] = useState('All')
   const [searchQuery, setSearchQuery] = useState('')
   const [paymentHistory, setPaymentHistory] = useState([])
   const [expenses, setExpenses] = useState([])
@@ -111,8 +125,18 @@ function App() {
       fetchTenants()
       fetchExpenses()
       fetchMaintenance()
+      fetchNotes()
     }
-  }, [token])
+  }, [token, filterStatus, minRent, maxRent, searchQuery])
+
+  const fetchNotes = async () => {
+    try {
+      const response = await apiRequest('get', '/notes')
+      setNotes(response.data)
+    } catch (error) {
+      console.error('Error fetching notes:', error)
+    }
+  }
 
   const fetchExpenses = async () => {
     try {
@@ -237,7 +261,13 @@ function App() {
 
   const fetchTenants = async () => {
     try {
-      const response = await apiRequest('get', '/tenants')
+      const params = new URLSearchParams()
+      if (filterStatus !== 'All') params.append('status', filterStatus)
+      if (minRent) params.append('min_rent', minRent)
+      if (maxRent) params.append('max_rent', maxRent)
+      if (searchQuery) params.append('search', searchQuery)
+
+      const response = await apiRequest('get', `/tenants?${params.toString()}`)
       setTenants(response.data)
     } catch (error) {
       console.error('Error fetching rental persons:', error)
@@ -457,6 +487,79 @@ function App() {
     }
   }
 
+  const handleRecordNote = async (e) => {
+    e.preventDefault()
+    try {
+      if (editingNote) {
+        await apiRequest('patch', `/note/${editingNote._id}`, noteData)
+      } else {
+        await apiRequest('post', '/note', noteData)
+      }
+      setShowNoteModal(false)
+      setEditingNote(null)
+      setNoteData({ title: '', content: '', category: 'General' })
+      fetchNotes()
+    } catch (error) {
+      console.error('Error saving note:', error)
+    }
+  }
+
+  const handleDeleteNote = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this note?")) return
+    try {
+      await apiRequest('delete', `/note/${id}`)
+      fetchNotes()
+    } catch (error) {
+      console.error('Error deleting note:', error)
+    }
+  }
+
+  const handleExportTenants = async () => {
+    try {
+      const params = new URLSearchParams()
+      if (filterStatus !== 'All') params.append('status', filterStatus)
+      if (minRent) params.append('min_rent', minRent)
+      if (maxRent) params.append('max_rent', maxRent)
+      if (searchQuery) params.append('search', searchQuery)
+
+      const response = await axios.get(`${API_BASE}/tenants/export?${params.toString()}`, {
+        headers: { Authorization: `Bearer ${token}` },
+        responseType: 'blob'
+      })
+      
+      const blobURL = window.URL.createObjectURL(new Blob([response.data]))
+      const link = document.createElement('a')
+      link.href = blobURL
+      link.setAttribute('download', `rentals_export_${new Date().toISOString().split('T')[0]}.csv`)
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+    } catch (error) {
+      console.error('Error exporting data:', error)
+      alert("Error exporting data")
+    }
+  }
+
+  const handleExportTenantPDF = async (tenant) => {
+    try {
+      const response = await axios.get(`${API_BASE}/tenant/${tenant._id}/pdf`, {
+        headers: { Authorization: `Bearer ${token}` },
+        responseType: 'blob'
+      })
+      
+      const blobURL = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }))
+      const link = document.createElement('a')
+      link.href = blobURL
+      link.setAttribute('download', `Tenant_Record_${tenant.name.replace(/\s+/g, '_')}.pdf`)
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+    } catch (error) {
+      console.error('Error exporting PDF:', error)
+      alert("Error generating PDF")
+    }
+  }
+
   const shareOnWhatsApp = (payment, tenant) => {
     const total = (parseFloat(payment.amount || 0) + parseFloat(payment.electricity_amount || 0)).toFixed(2);
     const message = `*Rent Receipt - Housely.io*%0A` +
@@ -548,39 +651,63 @@ function App() {
   }
 
   return (
-    <div className="dashboard-container">
+    <div className={`dashboard-container ${sidebarOpen ? 'sidebar-open' : ''}`}>
       {loading && <div className="top-loading-bar"></div>}
+      
+      {/* Mobile Header */}
+      <div className="mobile-header">
+         <button className="menu-toggle" onClick={() => setSidebarOpen(true)}>
+            <Menu size={24} />
+         </button>
+         <div className="brand mini">
+            <div className="logo-icon small">H</div>
+            <span>Housely.io</span>
+         </div>
+      </div>
+
+      {/* Overlay for mobile sidebar */}
+      {sidebarOpen && <div className="sidebar-overlay" onClick={() => setSidebarOpen(false)}></div>}
+
       {/* Sidebar */}
-      <aside className="sidebar">
+      <aside className={`sidebar ${sidebarOpen ? 'show' : ''}`}>
         <div className="brand">
           <div className="logo-icon">H</div>
           <span>Housely.io</span>
+          <button className="close-sidebar" onClick={() => setSidebarOpen(false)}>
+             <X size={20} />
+          </button>
         </div>
         
         <nav className="nav-menu">
           <button 
             className={view === 'dashboard' ? 'active' : ''} 
-            onClick={() => setView('dashboard')}
+            onClick={() => { setView('dashboard'); setSidebarOpen(false); }}
           >
             <LayoutDashboard size={20} /> Dashboard
           </button>
           <button 
             className={view === 'tenants' ? 'active' : ''} 
-            onClick={() => setView('tenants')}
+            onClick={() => { setView('tenants'); setSidebarOpen(false); }}
           >
             <Users size={20} /> My Rental Persons
           </button>
           <button 
             className={view === 'expenses' ? 'active' : ''} 
-            onClick={() => setView('expenses')}
+            onClick={() => { setView('expenses'); setSidebarOpen(false); }}
           >
             <Receipt size={20} /> Expense Tracker
           </button>
           <button 
             className={view === 'maintenance' ? 'active' : ''} 
-            onClick={() => setView('maintenance')}
+            onClick={() => { setView('maintenance'); setSidebarOpen(false); }}
           >
             <Wrench size={20} /> Maintenance Logs
+          </button>
+          <button 
+            className={view === 'notes' ? 'active' : ''} 
+            onClick={() => { setView('notes'); setSidebarOpen(false); }}
+          >
+            <StickyNote size={20} /> Quick Notes
           </button>
         </nav>
 
@@ -598,14 +725,49 @@ function App() {
             <Search size={18} />
             <input 
               type="text" 
-              placeholder="Search rental persons or rooms..." 
+              placeholder="Search by name, room or phone..." 
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
             />
           </div>
-          <button className="btn-primary" onClick={() => setShowAddForm(true)}>
-            <Plus size={18} /> Add Rental Person
-          </button>
+          
+          <div className="filter-controls">
+            <select 
+              className="mini-select"
+              value={filterStatus}
+              onChange={e => setFilterStatus(e.target.value)}
+            >
+              <option value="All">All Status</option>
+              <option value="active">Active</option>
+              <option value="leaving">Leaving</option>
+              <option value="inactive">Inactive</option>
+            </select>
+
+            <div className="rent-filter">
+              <input 
+                type="number" 
+                placeholder="Min Rent" 
+                value={minRent}
+                onChange={e => setMinRent(e.target.value)}
+              />
+              <span>-</span>
+              <input 
+                type="number" 
+                placeholder="Max Rent" 
+                value={maxRent}
+                onChange={e => setMaxRent(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div className="header-actions-group">
+            <button className="btn-outline" onClick={handleExportTenants}>
+              <Download size={18} /> Download Data
+            </button>
+            <button className="btn-primary" onClick={() => setShowAddForm(true)}>
+              <Plus size={18} /> Add Rental Person
+            </button>
+          </div>
         </header>
 
         {view === 'dashboard' && (
@@ -823,6 +985,57 @@ function App() {
           </div>
         )}
 
+        {view === 'notes' && (
+          <div className="view-content fade-in">
+            <div className="section-header">
+              <h1 className="page-title">Quick Notes</h1>
+              <button className="btn-primary" onClick={() => {
+                setEditingNote(null);
+                setNoteData({ title: '', content: '', category: 'General' });
+                setShowNoteModal(true);
+              }}>
+                <Plus size={18}/> New Note
+              </button>
+            </div>
+
+            <div className="category-tabs">
+              {['All', 'General', 'Urgent', 'Private', 'Task'].map(cat => (
+                <button 
+                  key={cat} 
+                  className={`tab-btn ${activeNoteCategory === cat ? 'active' : ''}`}
+                  onClick={() => setActiveNoteCategory(cat)}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
+
+            <div className="notes-grid">
+              {notes.filter(n => activeNoteCategory === 'All' || n.category === activeNoteCategory).map(note => (
+                <div key={note._id} className={`note-card cat-${note.category.toLowerCase()}`}>
+                  <div className="note-header">
+                    <span className="note-category">{note.category}</span>
+                    <div className="note-actions">
+                      <button className="icon-btn-small" onClick={() => {
+                        setEditingNote(note);
+                        setNoteData({ title: note.title, content: note.content, category: note.category });
+                        setShowNoteModal(true);
+                      }}><Edit2 size={14}/></button>
+                      <button className="icon-btn-small danger" onClick={() => handleDeleteNote(note._id)}><Trash2 size={14}/></button>
+                    </div>
+                  </div>
+                  <h3>{note.title}</h3>
+                  <p>{note.content}</p>
+                  <div className="note-footer">
+                    <span>{new Date(note.created_at).toLocaleDateString()}</span>
+                  </div>
+                </div>
+              ))}
+              {notes.length === 0 && <p className="empty-msg full-width">No notes found. Create your first note!</p>}
+            </div>
+          </div>
+        )}
+
         {view === 'tenants' && (
           <div className="view-content fade-in">
             <h1 className="page-title">Rental Person Management</h1>
@@ -850,6 +1063,12 @@ function App() {
                     <button className="btn-outline" onClick={() => viewHistory(tenant)}>
                       <History size={16} /> History
                     </button>
+                    <button className="btn-outline purple-text" onClick={() => {
+                      setSelectedTenant(tenant);
+                      setView('full-record');
+                    }}>
+                      <UserCheck size={16} /> Full Record
+                    </button>
                     <button className="btn-outline blue-text" onClick={() => openDocumentModal(tenant)}>
                       <FileText size={16} /> KYC
                     </button>
@@ -862,6 +1081,82 @@ function App() {
               {filteredTenants.length === 0 && (
                 <div className="empty-msg full-width">No rental persons found matching your search.</div>
               )}
+            </div>
+          </div>
+        )}
+
+        {view === 'full-record' && (
+          <div className="view-content fade-in">
+            <button className="back-link" onClick={() => setView('tenants')}>← Back to Rental Persons</button>
+            <div className="section-header">
+              <h1 className="page-title">Tenant Full Record: {selectedTenant?.name}</h1>
+              <div className="header-actions">
+                 <button className="btn-primary" onClick={() => handleExportTenantPDF(selectedTenant)}>
+                    <FileText size={18} /> Download PDF Record
+                 </button>
+                 <span className={`status-badge ${selectedTenant?.status}`}>{selectedTenant?.status}</span>
+              </div>
+            </div>
+
+            <div className="record-grid">
+              <div className="record-main-card">
+                 <div className="record-section">
+                    <h3><UserCheck size={18}/> Personal & Room Details</h3>
+                    <div className="details-list">
+                      <div className="detail-row"><span>Phone:</span> <strong>{selectedTenant?.phone}</strong></div>
+                      <div className="detail-row"><span>Room Number:</span> <strong>{selectedTenant?.room_number}</strong></div>
+                      <div className="detail-row"><span>Aadhar/ID:</span> <strong>{selectedTenant?.aadhar_number || 'Not Provided'}</strong></div>
+                      <div className="detail-row"><span>Emergency:</span> <strong>{selectedTenant?.emergency_contact || 'Not Provided'}</strong></div>
+                      <div className="detail-row"><span>Monthly Rent:</span> <strong>₹{selectedTenant?.rent_amount}</strong></div>
+                      <div className="detail-row"><span>Move-in Date:</span> <strong>{selectedTenant?.move_in_date}</strong></div>
+                    </div>
+                 </div>
+
+                 <div className="record-section">
+                    <h3><FileText size={18}/> KYC Documents ({selectedTenant?.documents?.length || 0})</h3>
+                    <div className="record-docs">
+                       {selectedTenant?.documents?.map(doc => (
+                         <div key={doc._id} className="mini-doc-item">
+                           <FileText size={14}/>
+                           <span>{doc.name} ({doc.type})</span>
+                           <a href={doc.file_path} target="_blank" rel="noreferrer">View</a>
+                         </div>
+                       ))}
+                       {(!selectedTenant?.documents || selectedTenant.documents.length === 0) && <p className="empty-mini">No documents found.</p>}
+                    </div>
+                 </div>
+              </div>
+
+              <div className="record-side-column">
+                 <div className="record-section">
+                    <h3><History size={18}/> Payment Summary</h3>
+                    <div className="payment-summary-stats">
+                       <div className="summary-stat">
+                          <p>Total Paid</p>
+                          <h4 className="success-text">₹{selectedTenant?.payments?.reduce((acc, p) => acc + (p.amount || 0), 0).toLocaleString()}</h4>
+                       </div>
+                       <div className="summary-stat">
+                          <p>Last Payment</p>
+                          <h4>{selectedTenant?.payments?.length > 0 ? selectedTenant.payments[selectedTenant.payments.length-1].date : 'None'}</h4>
+                       </div>
+                    </div>
+                 </div>
+
+                 <div className="record-section">
+                    <h3><CreditCard size={18}/> Recent Payments</h3>
+                    <div className="mini-history-list">
+                       {selectedTenant?.payments?.slice().reverse().slice(0, 5).map(p => (
+                         <div key={p._id} className="mini-history-item">
+                           <div className="mh-info">
+                              <strong>{p.month} {p.year}</strong>
+                              <span>{p.date}</span>
+                           </div>
+                           <div className="mh-amount success-text">₹{p.amount}</div>
+                         </div>
+                       ))}
+                    </div>
+                 </div>
+              </div>
             </div>
           </div>
         )}
@@ -1301,6 +1596,54 @@ function App() {
               <div className="modal-actions">
                 <button type="submit" className="btn-primary full-width">Save Payment Record</button>
               </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Note Modal */}
+      {showNoteModal && (
+        <div className="modal-overlay">
+          <div className="modal-card">
+            <div className="modal-header">
+              <h2>{editingNote ? 'Edit Note' : 'Create Quick Note'}</h2>
+              <button className="close-btn" onClick={() => setShowNoteModal(false)}><X size={20}/></button>
+            </div>
+            <form onSubmit={handleRecordNote}>
+              <div className="form-group">
+                <label>Note Title</label>
+                <input 
+                  required 
+                  placeholder="e.g. Electricity Bill Reminder" 
+                  value={noteData.title}
+                  onChange={e => setNoteData({...noteData, title: e.target.value})}
+                />
+              </div>
+              <div className="form-group">
+                <label>Category</label>
+                <select 
+                  className="custom-select"
+                  value={noteData.category}
+                  onChange={e => setNoteData({...noteData, category: e.target.value})}
+                >
+                  <option value="General">General</option>
+                  <option value="Urgent">Urgent</option>
+                  <option value="Private">Private</option>
+                  <option value="Task">Task</option>
+                </select>
+              </div>
+              <div className="form-group">
+                <label>Write anything here...</label>
+                <textarea 
+                  required 
+                  className="custom-textarea"
+                  style={{minHeight: '200px'}}
+                  placeholder="Type your notes or reminders here..."
+                  value={noteData.content}
+                  onChange={e => setNoteData({...noteData, content: e.target.value})}
+                ></textarea>
+              </div>
+              <button type="submit" className="btn-primary full-width">{editingNote ? 'Update Note' : 'Save Note'}</button>
             </form>
           </div>
         </div>

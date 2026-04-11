@@ -10,8 +10,7 @@ async def test_all_credentials():
     URL = os.getenv("MONGODB_URL")
     DB_NAME = os.getenv("DATABASE_NAME", "house_db")
     
-    print("
---- 🔍 DIAGNOSTIC TOOL ---")
+    print("\n--- 🔍 DIAGNOSTIC TOOL ---")
     
     # 1. Test Network
     print(f"1. Testing network connection to cluster...")

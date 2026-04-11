@@ -16,8 +16,8 @@ import cloudinary
 import cloudinary.uploader
 from cloudinary.utils import cloudinary_url
 
-import schemas, auth
-from database import get_database
+from . import schemas, auth
+from .database import get_database
 
 # Cloudinary Configuration
 cloudinary.config( 
