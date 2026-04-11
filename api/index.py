@@ -39,10 +39,9 @@ cloudinary.config(
 app = FastAPI()
 router = APIRouter()
 
-# --- HEALTH ENDPOINTS (Direct on App for maximum reliability) ---
+# --- HEALTH ENDPOINTS ---
 @app.get("/api/health")
 @app.get("/health")
-@app.get("/")
 async def health_check():
     return {"status": "ok", "message": "Backend is running"}
 
