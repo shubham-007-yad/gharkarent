@@ -65,7 +65,7 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
         return {"access_token": access_token, "token_type": "bearer"}
     except Exception as e:
         if isinstance(e, HTTPException): raise e
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=f"Backend Debug Error: {str(e)}")
 
 @router.post("/register", response_model=schemas.User)
 async def register_user(user: schemas.UserCreate, db = Depends(get_database)):
