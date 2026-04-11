@@ -36,7 +36,7 @@ import DatePicker from "react-datepicker"
 import "react-datepicker/dist/react-datepicker.css"
 import './App.css'
 
-const API_BASE = import.meta.env.VITE_API_URL || '/api'
+const API_BASE = import.meta.env.VITE_API_URL || ''
 
 const MONTHS = [
   "January", "February", "March", "April", "May", "June", 
