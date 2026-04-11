@@ -587,4 +587,4 @@ async def delete_note(note_id: str, db = Depends(get_database), current_user = D
         raise HTTPException(status_code=404, detail="Note not found")
     return {"status": "success", "message": "Note deleted"}
 
-app.include_router(router, prefix="/api")
+app.include_router(router)
