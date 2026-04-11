@@ -1,5 +1,6 @@
 from motor.motor_asyncio import AsyncIOMotorClient
 from dotenv import load_dotenv
+from fastapi import HTTPException
 import os
 
 load_dotenv()
