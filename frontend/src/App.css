@@ -767,12 +767,6 @@ body {
   50% { transform: scaleX(0.5); }
   100% { transform: scaleX(1); }
 }
-  background: rgba(15, 23, 42, 0.5);
-  border: 1px dashed var(--border-color);
-  padding: 0.75rem;
-  border-radius: 12px;
-  margin: 1rem 0;
-}
 
 .section-subtitle {
   font-size: 0.75rem;

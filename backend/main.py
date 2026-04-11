@@ -21,9 +21,9 @@ from database import get_database
 
 # Cloudinary Configuration
 cloudinary.config( 
-  cloud_name = "dxbbvlppl", 
-  api_key = "436835433477921", 
-  api_secret = "dJajvptSYysIAoQ40u7ajVER-OQ",
+  cloud_name = os.getenv("CLOUDINARY_CLOUD_NAME"), 
+  api_key = os.getenv("CLOUDINARY_API_KEY"), 
+  api_secret = os.getenv("CLOUDINARY_API_SECRET"),
   secure = True
 )
 
@@ -47,8 +47,8 @@ origins = [
 # Enable CORS for React frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
-    allow_credentials=True,
+    allow_origins=["*"],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -61,8 +61,7 @@ async def global_exception_handler(request: Request, exc: Exception):
         status_code=500,
         content={"detail": f"Internal Server Error: {str(exc)}"},
         headers={
-            "Access-Control-Allow-Origin": "http://localhost:5173",
-            "Access-Control-Allow-Credentials": "true",
+            "Access-Control-Allow-Origin": "*",
         }
     )
 
