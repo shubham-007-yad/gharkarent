@@ -38,9 +38,10 @@ cloudinary.config(
 
 app = FastAPI()
 
-@app.get("/health")
+@app.get("/api/health")
 async def health_check():
-    return {"status": "ok", "message": "Backend is running on Vercel"}
+    return {"status": "ok", "message": "Backend is running on Vercel at /api/health"}
+
 
 # Mount uploads directory safely (Vercel is read-only)
 try:
@@ -92,7 +93,7 @@ def prepare_mongo_data(data: dict):
     return new_data
 
 # Authentication Endpoints
-@app.post("/token", response_model=schemas.Token)
+@app.post("/api/token", response_model=schemas.Token)
 async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db = Depends(get_database)):
     try:
         user = await db.users.find_one({"username": form_data.username})
@@ -126,7 +127,7 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
         # Otherwise, return a 500 with the error message for debugging
         raise HTTPException(status_code=500, detail=f"Database or Server Error: {str(e)}")
 
-@app.post("/register", response_model=schemas.User)
+@app.post("/api/register", response_model=schemas.User)
 async def register_user(user: schemas.UserCreate, db = Depends(get_database)):
     db_user = await db.users.find_one({"username": user.username})
     if db_user:
@@ -142,7 +143,7 @@ async def register_user(user: schemas.UserCreate, db = Depends(get_database)):
     return new_user_dict
 
 # Tenant Endpoints
-@app.post("/tenant", response_model=schemas.Tenant)
+@app.post("/api/tenant", response_model=schemas.Tenant)
 async def create_tenant(tenant: schemas.TenantCreate, db = Depends(get_database), current_user = Depends(auth.get_current_user)):
     try:
         tenant_dict = prepare_mongo_data(tenant.dict())
@@ -158,7 +159,7 @@ async def create_tenant(tenant: schemas.TenantCreate, db = Depends(get_database)
         logger.error(f"Error in create_tenant: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Failed to create rental person: {str(e)}")
 
-@app.get("/tenants/export")
+@app.get("/api/tenants/export")
 async def export_tenants(
     status: Optional[str] = None,
     min_rent: Optional[float] = None,
@@ -226,7 +227,7 @@ async def export_tenants(
         print(f"Export error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to generate export: {str(e)}")
 
-@app.get("/tenant/{tenant_id}/pdf")
+@app.get("/api/tenant/{tenant_id}/pdf")
 async def export_tenant_pdf(
     tenant_id: str,
     db = Depends(get_database), 
@@ -311,7 +312,7 @@ async def export_tenant_pdf(
         print(f"PDF Export error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to generate PDF: {str(e)}")
 
-@app.get("/tenants", response_model=List[schemas.Tenant])
+@app.get("/api/tenants", response_model=List[schemas.Tenant])
 async def read_tenants(
     skip: int = 0, 
     limit: int = 100, 
@@ -376,7 +377,7 @@ async def read_tenants(
         logger.error(f"Error in read_tenants: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Database or processing error: {str(e)}")
 
-@app.patch("/tenant/{tenant_id}", response_model=schemas.Tenant)
+@app.patch("/api/tenant/{tenant_id}", response_model=schemas.Tenant)
 async def update_tenant(tenant_id: str, tenant_update: schemas.TenantUpdate, db = Depends(get_database), current_user = Depends(auth.get_current_user)):
     update_data = prepare_mongo_data(tenant_update.dict(exclude_unset=True))
     if not update_data:
@@ -406,7 +407,7 @@ async def update_tenant(tenant_id: str, tenant_update: schemas.TenantUpdate, db 
     return result
 
 # Payment Endpoints
-@app.post("/payment/{tenant_id}", response_model=schemas.Payment)
+@app.post("/api/payment/{tenant_id}", response_model=schemas.Payment)
 async def create_payment(tenant_id: str, payment: schemas.PaymentCreate, db = Depends(get_database), current_user = Depends(auth.get_current_user)):
     payment_dict = prepare_mongo_data(payment.dict())
     payment_dict["tenant_id"] = tenant_id
@@ -415,7 +416,7 @@ async def create_payment(tenant_id: str, payment: schemas.PaymentCreate, db = De
     payment_dict["_id"] = str(result.inserted_id)
     return payment_dict
 
-@app.get("/payments/{tenant_id}", response_model=List[schemas.Payment])
+@app.get("/api/payments/{tenant_id}", response_model=List[schemas.Payment])
 async def read_payments(tenant_id: str, db = Depends(get_database), current_user = Depends(auth.get_current_user)):
     payments_cursor = db.payments.find({"tenant_id": tenant_id})
     payments = await payments_cursor.to_list(length=100)
@@ -424,14 +425,14 @@ async def read_payments(tenant_id: str, db = Depends(get_database), current_user
     return payments
 
 # Expense Endpoints
-@app.post("/expense", response_model=schemas.Expense)
+@app.post("/api/expense", response_model=schemas.Expense)
 async def create_expense(expense: schemas.ExpenseCreate, db = Depends(get_database), current_user = Depends(auth.get_current_user)):
     expense_dict = prepare_mongo_data(expense.dict())
     result = await db.expenses.insert_one(expense_dict)
     expense_dict["_id"] = str(result.inserted_id)
     return expense_dict
 
-@app.get("/expenses", response_model=List[schemas.Expense])
+@app.get("/api/expenses", response_model=List[schemas.Expense])
 async def read_expenses(db = Depends(get_database), current_user = Depends(auth.get_current_user)):
     expenses_cursor = db.expenses.find()
     expenses = await expenses_cursor.to_list(length=100)
@@ -440,14 +441,14 @@ async def read_expenses(db = Depends(get_database), current_user = Depends(auth.
     return expenses
 
 # Maintenance Endpoints
-@app.post("/maintenance", response_model=schemas.Maintenance)
+@app.post("/api/maintenance", response_model=schemas.Maintenance)
 async def create_maintenance(maintenance: schemas.MaintenanceCreate, db = Depends(get_database), current_user = Depends(auth.get_current_user)):
     m_dict = prepare_mongo_data(maintenance.dict())
     result = await db.maintenance.insert_one(m_dict)
     m_dict["_id"] = str(result.inserted_id)
     return m_dict
 
-@app.get("/maintenance", response_model=List[schemas.Maintenance])
+@app.get("/api/maintenance", response_model=List[schemas.Maintenance])
 async def read_maintenance(db = Depends(get_database), current_user = Depends(auth.get_current_user)):
     m_cursor = db.maintenance.find()
     maintenance_list = await m_cursor.to_list(length=100)
@@ -455,7 +456,7 @@ async def read_maintenance(db = Depends(get_database), current_user = Depends(au
         m["_id"] = str(m["_id"])
     return maintenance_list
 
-@app.patch("/maintenance/{m_id}", response_model=schemas.Maintenance)
+@app.patch("/api/maintenance/{m_id}", response_model=schemas.Maintenance)
 async def update_maintenance(m_id: str, m_update: schemas.MaintenanceUpdate, db = Depends(get_database), current_user = Depends(auth.get_current_user)):
     # Check if it is already resolved
     existing = await db.maintenance.find_one({"_id": ObjectId(m_id)})
@@ -476,7 +477,7 @@ async def update_maintenance(m_id: str, m_update: schemas.MaintenanceUpdate, db 
     return result
 
 # Document Endpoints
-@app.post("/document/upload/{tenant_id}", response_model=schemas.Document)
+@app.post("/api/document/upload/{tenant_id}", response_model=schemas.Document)
 async def upload_document(
     tenant_id: str,
     name: str = Form(...),
@@ -519,7 +520,7 @@ async def upload_document(
         logger.error(f"Cloudinary upload error: {str(e)}")
         raise HTTPException(status_code=500, detail="Error uploading document to cloud")
 
-@app.get("/documents/{tenant_id}", response_model=List[schemas.Document])
+@app.get("/api/documents/{tenant_id}", response_model=List[schemas.Document])
 async def get_documents(tenant_id: str, db = Depends(get_database), current_user = Depends(auth.get_current_user)):
     docs_cursor = db.documents.find({"tenant_id": tenant_id})
     docs = await docs_cursor.to_list(length=100)
@@ -527,7 +528,7 @@ async def get_documents(tenant_id: str, db = Depends(get_database), current_user
         d["_id"] = str(d["_id"])
     return docs
 
-@app.delete("/document/{doc_id}")
+@app.delete("/api/document/{doc_id}")
 async def delete_document(doc_id: str, db = Depends(get_database), current_user = Depends(auth.get_current_user)):
     doc = await db.documents.find_one({"_id": ObjectId(doc_id)})
     if not doc:
@@ -546,7 +547,7 @@ async def delete_document(doc_id: str, db = Depends(get_database), current_user 
         raise HTTPException(status_code=500, detail="Error deleting document from cloud")
 
 # Notes Endpoints
-@app.post("/note", response_model=schemas.Note)
+@app.post("/api/note", response_model=schemas.Note)
 async def create_note(note: schemas.NoteCreate, db = Depends(get_database), current_user = Depends(auth.get_current_user)):
     note_dict = note.dict()
     # Pydantic's default_factory handles created_at/updated_at but if they are already there they'll be preserved.
@@ -555,7 +556,7 @@ async def create_note(note: schemas.NoteCreate, db = Depends(get_database), curr
     note_dict["_id"] = str(result.inserted_id)
     return note_dict
 
-@app.get("/notes", response_model=List[schemas.Note])
+@app.get("/api/notes", response_model=List[schemas.Note])
 async def read_notes(db = Depends(get_database), current_user = Depends(auth.get_current_user)):
     notes_cursor = db.notes.find().sort("created_at", -1)
     notes = await notes_cursor.to_list(length=100)
@@ -563,7 +564,7 @@ async def read_notes(db = Depends(get_database), current_user = Depends(auth.get
         n["_id"] = str(n["_id"])
     return notes
 
-@app.patch("/note/{note_id}", response_model=schemas.Note)
+@app.patch("/api/note/{note_id}", response_model=schemas.Note)
 async def update_note(note_id: str, note_update: schemas.NoteUpdate, db = Depends(get_database), current_user = Depends(auth.get_current_user)):
     update_data = {k: v for k, v in note_update.dict().items() if v is not None}
     update_data["updated_at"] = datetime.now()
@@ -578,7 +579,7 @@ async def update_note(note_id: str, note_update: schemas.NoteUpdate, db = Depend
     result["_id"] = str(result["_id"])
     return result
 
-@app.delete("/note/{note_id}")
+@app.delete("/api/note/{note_id}")
 async def delete_note(note_id: str, db = Depends(get_database), current_user = Depends(auth.get_current_user)):
     delete_result = await db.notes.delete_one({"_id": ObjectId(note_id)})
     if delete_result.deleted_count == 0:
