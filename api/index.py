@@ -1,10 +1,9 @@
 from fastapi import FastAPI, Depends, HTTPException, status, Request, UploadFile, File, Form, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, FileResponse, StreamingResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 import io
 import csv
 from fpdf import FPDF
-from fastapi.staticfiles import StaticFiles
 from typing import List, Optional
 from fastapi.security import OAuth2PasswordRequestForm
 from datetime import timedelta, date, datetime
@@ -40,10 +39,9 @@ app = FastAPI()
 router = APIRouter()
 
 # --- HEALTH ENDPOINTS ---
-@app.get("/api/health")
-@app.get("/health")
+@router.get("/health")
 async def health_check():
-    return {"status": "ok", "message": "Backend is running"}
+    return {"status": "ok", "message": "Backend is running on Vercel API"}
 
 # --- AUTHENTICATION ---
 @router.post("/token", response_model=schemas.Token)
@@ -111,19 +109,15 @@ async def read_tenants(status: Optional[str] = None, min_rent: Optional[float] =
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/tenants/export")
-async def export_tenants(status: Optional[str] = None, search: Optional[str] = None, db = Depends(get_database), current_user = Depends(auth.get_current_user)):
-    try:
-        cursor = db.tenants.find({})
-        tenants = await cursor.to_list(1000)
-        output = io.StringIO()
-        writer = csv.writer(output)
-        writer.writerow(["Name", "Phone", "Room"])
-        for t in tenants:
-            writer.writerow([t.get("name"), t.get("phone"), t.get("room_number")])
-        output.seek(0)
-        return StreamingResponse(io.BytesIO(output.getvalue().encode('utf-8-sig')), media_type="text/csv", headers={"Content-Disposition": "attachment; filename=export.csv"})
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+async def export_tenants(db = Depends(get_database), current_user = Depends(auth.get_current_user)):
+    cursor = db.tenants.find({})
+    tenants = await cursor.to_list(1000)
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["Name", "Phone", "Room"])
+    for t in tenants:
+        writer.writerow([t.get("name"), t.get("phone"), t.get("room_number")])
+    return StreamingResponse(io.BytesIO(output.getvalue().encode('utf-8-sig')), media_type="text/csv", headers={"Content-Disposition": "attachment; filename=export.csv"})
 
 @router.get("/tenant/{tenant_id}/pdf")
 async def export_pdf(tenant_id: str, db = Depends(get_database), current_user = Depends(auth.get_current_user)):
@@ -140,7 +134,6 @@ async def update_tenant(tenant_id: str, update: schemas.TenantUpdate, db = Depen
     res["_id"] = str(res["_id"])
     return res
 
-# --- PAYMENTS ---
 @router.post("/payment/{tenant_id}", response_model=schemas.Payment)
 async def create_payment(tenant_id: str, payment: schemas.PaymentCreate, db = Depends(get_database), current_user = Depends(auth.get_current_user)):
     p_dict = payment.dict()
@@ -149,7 +142,6 @@ async def create_payment(tenant_id: str, payment: schemas.PaymentCreate, db = De
     p_dict["_id"] = str(result.inserted_id)
     return p_dict
 
-# --- EXPENSES ---
 @router.get("/expenses", response_model=List[schemas.Expense])
 async def get_expenses(db = Depends(get_database), current_user = Depends(auth.get_current_user)):
     res = await db.expenses.find().to_list(100)
@@ -163,7 +155,6 @@ async def create_expense(expense: schemas.ExpenseCreate, db = Depends(get_databa
     e_dict["_id"] = str(result.inserted_id)
     return e_dict
 
-# --- MAINTENANCE ---
 @router.get("/maintenance", response_model=List[schemas.Maintenance])
 async def get_m(db = Depends(get_database), current_user = Depends(auth.get_current_user)):
     res = await db.maintenance.find().to_list(100)
@@ -183,7 +174,6 @@ async def update_m(m_id: str, update: schemas.MaintenanceUpdate, db = Depends(ge
     res["_id"] = str(res["_id"])
     return res
 
-# --- DOCUMENTS ---
 @router.post("/document/upload/{tenant_id}", response_model=schemas.Document)
 async def upload_doc(tenant_id: str, name: str = Form(...), doc_type: str = Form(...), file: UploadFile = File(...), db = Depends(get_database), current_user = Depends(auth.get_current_user)):
     up = cloudinary.uploader.upload(file.file, folder="house_kyc")
@@ -203,7 +193,6 @@ async def del_doc(doc_id: str, db = Depends(get_database), current_user = Depend
     await db.documents.delete_one({"_id": ObjectId(doc_id)})
     return {"status": "success"}
 
-# --- NOTES ---
 @router.get("/notes", response_model=List[schemas.Note])
 async def get_notes(db = Depends(get_database), current_user = Depends(auth.get_current_user)):
     res = await db.notes.find().sort("created_at", -1).to_list(100)
@@ -219,40 +208,18 @@ async def create_note(note: schemas.NoteCreate, db = Depends(get_database), curr
 
 @router.patch("/note/{note_id}", response_model=schemas.Note)
 async def update_note(note_id: str, update: schemas.NoteUpdate, db = Depends(get_database), current_user = Depends(auth.get_current_user)):
-    res = await db.notes.find_one_and_update({"_id": ObjectId(note_id)}, {"$set": update.dict(exclude_unset=True)}, return_document=True)
-    res["_id"] = str(res["_id"])
-    return res
+    u_data = {k: v for k, v in update.dict().items() if v is not None}
+    u_data["updated_at"] = datetime.now()
+    result = await db.notes.find_one_and_update({"_id": ObjectId(note_id)}, {"$set": u_data}, return_document=True)
+    result["_id"] = str(result["_id"])
+    return result
 
 @router.delete("/note/{note_id}")
 async def del_note(note_id: str, db = Depends(get_database), current_user = Depends(auth.get_current_user)):
     await db.notes.delete_one({"_id": ObjectId(note_id)})
     return {"status": "success"}
 
-# --- ROUTER INCLUSION ---
-app.include_router(router, prefix="/api")
 app.include_router(router)
-
-# Mount uploads directory safely (Vercel is read-only)
-try:
-    if not os.path.exists("/tmp/uploads"):
-        os.makedirs("/tmp/uploads")
-    app.mount("/uploads", StaticFiles(directory="/tmp/uploads"), name="uploads")
-except:
-    pass
-
-# Mount React static assets
-if os.path.exists("assets"):
-    app.mount("/assets", StaticFiles(directory="assets"), name="assets")
 
 # Enable CORS
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=False, allow_methods=["*"], allow_headers=["*"])
-
-# CATCH-ALL FOR REACT FRONTEND
-@app.get("/{full_path:path}")
-async def serve_react(full_path: str):
-    if os.path.exists("index.html"):
-        return FileResponse("index.html")
-    return JSONResponse(
-        status_code=404,
-        content={"detail": "Website files not found on server. Please check the build logs."}
-    )

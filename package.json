@@ -2,7 +2,6 @@
   "name": "house-management-erp",
   "version": "1.0.0",
   "scripts": {
-    "build": "cd frontend && npm install && npm run build && cd .. && rm -rf dist && cp -r frontend/dist ./dist",
-    "install": "cd frontend && npm install"
+    "build": "cd frontend && npm install && npm run build"
   }
 }
