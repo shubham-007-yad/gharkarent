@@ -219,6 +219,7 @@ async def del_note(note_id: str, db = Depends(get_database), current_user = Depe
     await db.notes.delete_one({"_id": ObjectId(note_id)})
     return {"status": "success"}
 
+app.include_router(router, prefix="/api")
 app.include_router(router)
 
 # Enable CORS
