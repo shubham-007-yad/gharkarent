@@ -27,7 +27,7 @@ cloudinary.config(
   secure = True
 )
 
-app = FastAPI(root_path="/api")
+app = FastAPI()
 
 # Mount uploads directory safely (Vercel is read-only)
 try:
