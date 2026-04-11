@@ -16,8 +16,17 @@ import cloudinary
 import cloudinary.uploader
 from cloudinary.utils import cloudinary_url
 
-from . import schemas, auth
-from .database import get_database
+import sys
+from pathlib import Path
+
+# Add current directory to path for stable imports
+current_dir = str(Path(__file__).parent)
+if current_dir not in sys.path:
+    sys.path.append(current_dir)
+
+import schemas
+import auth
+from database import get_database
 
 # Cloudinary Configuration
 cloudinary.config( 
@@ -28,6 +37,10 @@ cloudinary.config(
 )
 
 app = FastAPI()
+
+@app.get("/health")
+async def health_check():
+    return {"status": "ok", "message": "Backend is running on Vercel"}
 
 # Mount uploads directory safely (Vercel is read-only)
 try:
