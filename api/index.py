@@ -40,18 +40,13 @@ router = APIRouter()
 
 # --- HEALTH ENDPOINTS ---
 @router.get("/health")
-async def health_check(db = Depends(get_database)):
-    # Self-heal: Create admin if no users exist
-    user_count = await db.users.count_documents({})
-    if user_count == 0:
-        hashed_password = auth.get_password_hash("admin123")
-        await db.users.insert_one({
-            "username": "admin",
-            "hashed_password": hashed_password,
-            "full_name": "System Admin"
-        })
-        return {"status": "ok", "message": "Backend initialized and Admin created"}
-    return {"status": "ok", "message": "Backend is running on Vercel API"}
+async def health_check():
+    from database import db_error
+    return {
+        "status": "ok", 
+        "db_error": db_error,
+        "env_keys": list(os.environ.keys())
+    }
 
 # --- AUTHENTICATION ---
 @router.post("/token", response_model=schemas.Token)
