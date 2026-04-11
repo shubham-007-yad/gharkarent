@@ -1,10 +1,18 @@
+import os
+import sys
+from pathlib import Path
 from datetime import datetime, timedelta
 from typing import Optional
 from jose import JWTError, jwt
 import bcrypt
-import os
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
+
+# SETUP PATHS FOR VERCEL
+current_dir = Path(__file__).parent.resolve()
+if str(current_dir) not in sys.path:
+    sys.path.append(str(current_dir))
+
 from database import get_database
 from dotenv import load_dotenv
 

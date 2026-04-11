@@ -244,7 +244,10 @@ function App() {
       if (error.response?.status === 401) {
         setLoginError('Invalid username or password')
       } else if (error.response?.status === 500) {
-        setLoginError(`Server Error: ${error.response.data?.detail || 'Contact Developer'}`)
+        const detail = error.response.data?.detail || 'Server Error'
+        const errMsg = error.response.data?.error_message ? ` - ${error.response.data.error_message}` : ''
+        setLoginError(`${detail}${errMsg}`)
+        console.error('Full Error:', error.response.data)
       } else {
         setLoginError('Connection Error: Is the backend running?')
       }

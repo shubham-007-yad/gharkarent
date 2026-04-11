@@ -24,6 +24,20 @@ import auth
 import database
 
 app = FastAPI()
+
+# Global exception handler to return JSON instead of HTML on crash
+@app.exception_handler(Exception)
+async def debug_exception_handler(request: Request, exc: Exception):
+    import traceback
+    return JSONResponse(
+        status_code=500,
+        content={
+            "detail": "CRITICAL BACKEND CRASH",
+            "error_message": str(exc),
+            "traceback": traceback.format_exc()
+        }
+    )
+
 router = APIRouter()
 
 @app.get("/api/health")
