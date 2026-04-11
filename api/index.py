@@ -29,10 +29,13 @@ cloudinary.config(
 
 app = FastAPI(root_path="/api")
 
-# Mount uploads directory to serve files
-if not os.path.exists("uploads"):
-    os.makedirs("uploads")
-app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+# Mount uploads directory safely (Vercel is read-only)
+try:
+    if not os.path.exists("/tmp/uploads"):
+        os.makedirs("/tmp/uploads")
+    app.mount("/uploads", StaticFiles(directory="/tmp/uploads"), name="uploads")
+except Exception as e:
+    print(f"Skipping uploads mount: {e}")
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
