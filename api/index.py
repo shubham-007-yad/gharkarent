@@ -37,15 +37,16 @@ cloudinary.config(
 )
 
 app = FastAPI()
-router = APIRouter(prefix="/api")
+router = APIRouter()
 
 @router.get("/health")
+@router.get("/")
 async def health_check():
-    return {"status": "ok", "message": "Backend is running on Vercel via /api/health"}
+    return {"status": "ok", "message": "Backend is running"}
 
-# Debug catch-all to see what path is actually arriving
+# Debug catch-all
 @app.api_route("/{full_path:path}", methods=["GET", "POST", "PATCH", "DELETE", "PUT"])
-async def catch_all(request: Request, full_path: str):
+async def catch_all(request: Request, full_path: str = ""):
     return {"detail": "Not Found", "received_path": f"/{full_path}", "method": request.method}
 
 
@@ -592,4 +593,5 @@ async def delete_note(note_id: str, db = Depends(get_database), current_user = D
         raise HTTPException(status_code=404, detail="Note not found")
     return {"status": "success", "message": "Note deleted"}
 
+app.include_router(router, prefix="/api")
 app.include_router(router)
