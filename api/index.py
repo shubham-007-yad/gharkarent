@@ -39,21 +39,11 @@ cloudinary.config(
 app = FastAPI()
 router = APIRouter()
 
-# Include router EARLY so it catches /api requests first
-app.include_router(router, prefix="/api")
-
+# Health check on both router and app
 @router.get("/health")
 @router.get("/")
 async def health_check():
     return {"status": "ok", "message": "Backend is running"}
-
-# Debug catch-all (MOVE THIS AFTER ROUTER)
-@app.api_route("/{full_path:path}", methods=["GET", "POST", "PATCH", "DELETE", "PUT"])
-async def catch_all(request: Request, full_path: str = ""):
-    # If the path starts with api/, it really should have been caught by the router
-    # If we are here, it means the specific route inside /api/ doesn't exist
-    return {"detail": "Not Found", "received_path": f"/{full_path}", "method": request.method}
-
 
 # Mount uploads directory safely (Vercel is read-only)
 try:
@@ -597,3 +587,5 @@ async def delete_note(note_id: str, db = Depends(get_database), current_user = D
     if delete_result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Note not found")
     return {"status": "success", "message": "Note deleted"}
+app.include_router(router, prefix="/api")
+app.include_router(router)
