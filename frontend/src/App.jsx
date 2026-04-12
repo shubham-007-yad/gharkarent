@@ -662,7 +662,7 @@ function App() {
 
   const recentActivity = [...recentPayments, ...recentDocs]
     .sort((a, b) => new Date(b.activityDate) - new Date(a.activityDate))
-    .slice(0, 6)
+    .slice(0, 30)
   const currentMonth = MONTHS[new Date().getMonth()]
   const currentYear = new Date().getFullYear()
   const defaulters = tenants.filter(tenant => {
