@@ -78,6 +78,7 @@ function App() {
   const [showPayModal, setShowPayModal] = useState(false)
   const [showLeavingModal, setShowLeavingModal] = useState(false)
   const [showExpenseModal, setShowExpenseModal] = useState(false)
+  const [editingExpense, setEditingExpense] = useState(null)
   const [showMaintenanceModal, setShowMaintenanceModal] = useState(false)
   const [editingMaintenance, setEditingMaintenance] = useState(null)
   const [showDocumentModal, setShowDocumentModal] = useState(false)
@@ -408,18 +409,37 @@ function App() {
   const handleRecordExpense = async (e) => {
     e.preventDefault()
     try {
-      await apiRequest('post', '/expense', {
+      const data = {
         ...expenseData,
         amount: parseFloat(expenseData.amount || 0),
         date: expenseData.date.toISOString().split('T')[0]
-      })
+      }
+      
+      if (editingExpense) {
+        await apiRequest('patch', `/expense/${editingExpense._id}`, data)
+      } else {
+        await apiRequest('post', '/expense', data)
+      }
+      
       setShowExpenseModal(false)
+      setEditingExpense(null)
       setExpenseData({
         title: '', amount: '', category: 'Repair', date: new Date(), description: ''
       })
       fetchExpenses()
     } catch (error) {
       console.error('Error recording expense:', error)
+      alert('Error saving expense')
+    }
+  }
+
+  const handleDeleteExpense = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this expense?")) return
+    try {
+      await apiRequest('delete', `/expense/${id}`)
+      fetchExpenses()
+    } catch (error) {
+      console.error('Error deleting expense:', error)
     }
   }
 
@@ -598,16 +618,38 @@ function App() {
   const kycPercentage = tenants.length > 0 ? Math.round((kycCompliantCount / tenants.length) * 100) : 0
 
   // Derive Recent Activity
-  const recentPayments = tenants.flatMap(t => (t.payments || []).map(p => ({...p, tenantName: t.name, type: 'payment'})))
-    .sort((a, b) => new Date(b.date) - new Date(a.date))
-    .slice(0, 5)
+  const formatRelativeTime = (dateString) => {
+    if (!dateString) return 'N/A'
+    const now = new Date()
+    const past = new Date(dateString)
+    const diffInMs = now - past
+    const diffInMins = Math.floor(diffInMs / (1000 * 60))
+    const diffInHours = Math.floor(diffInMins / 60)
+    const diffInDays = Math.floor(diffInHours / 24)
 
-  const recentDocs = tenants.flatMap(t => (t.documents || []).map(d => ({...d, tenantName: t.name, type: 'document'})))
-    .sort((a, b) => new Date(b.upload_date) - new Date(a.upload_date))
-    .slice(0, 5)
+    if (diffInMins < 1) return 'Just now'
+    if (diffInMins < 60) return `${diffInMins}m ago`
+    if (diffInHours < 24) return `${diffInHours}h ago`
+    if (diffInDays < 7) return `${diffInDays}d ago`
+    return past.toLocaleDateString()
+  }
+
+  const recentPayments = tenants.flatMap(t => (t.payments || []).map(p => ({
+    ...p, 
+    tenantName: t.name, 
+    type: 'payment',
+    activityDate: p.updated_at || p.date // Fallback to date if updated_at is missing for old records
+  })))
+
+  const recentDocs = tenants.flatMap(t => (t.documents || []).map(d => ({
+    ...d, 
+    tenantName: t.name, 
+    type: 'document',
+    activityDate: d.upload_date
+  })))
 
   const recentActivity = [...recentPayments, ...recentDocs]
-    .sort((a, b) => new Date(b.date || b.upload_date) - new Date(a.date || a.upload_date))
+    .sort((a, b) => new Date(b.activityDate) - new Date(a.activityDate))
     .slice(0, 6)
   const currentMonth = MONTHS[new Date().getMonth()]
   const currentYear = new Date().getFullYear()
@@ -879,7 +921,7 @@ function App() {
                       </div>
                       <div className="activity-data">
                         <p><strong>{act.tenantName}</strong> {act.type === 'payment' ? `paid ₹${act.amount}` : `uploaded ${act.name}`}</p>
-                        <span>{new Date(act.date || act.upload_date).toLocaleDateString()}</span>
+                        <span>{formatRelativeTime(act.activityDate)}</span>
                       </div>
                     </div>
                   ))}
@@ -911,8 +953,9 @@ function App() {
             <div className="section-header">
               <h1 className="page-title">Expense Management</h1>
               <button className="btn-primary" onClick={() => {
+                setEditingExpense(null);
+                setExpenseData({ title: '', amount: '', category: 'Repair', date: new Date(), description: '' });
                 setShowExpenseModal(true);
-                setSidebarOpen(false);
               }}><Plus size={18}/> Add Expense</button>
             </div>
             <div className="table-container">
@@ -923,6 +966,7 @@ function App() {
                     <th>Category</th>
                     <th>Date</th>
                     <th>Amount (₹)</th>
+                    <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -932,9 +976,25 @@ function App() {
                       <td><span className="category-tag">{exp.category}</span></td>
                       <td>{exp.date}</td>
                       <td className="warning-text">₹{exp.amount}</td>
+                      <td>
+                        <div className="row-actions">
+                          <button className="icon-btn-small" onClick={() => {
+                            setEditingExpense(exp);
+                            setExpenseData({
+                              title: exp.title,
+                              amount: exp.amount,
+                              category: exp.category,
+                              date: new Date(exp.date),
+                              description: exp.description || ''
+                            });
+                            setShowExpenseModal(true);
+                          }}><Edit2 size={14}/></button>
+                          <button className="icon-btn-small danger" onClick={() => handleDeleteExpense(exp._id)}><Trash2 size={14}/></button>
+                        </div>
+                      </td>
                     </tr>
                   ))}
-                  {expenses.length === 0 && <tr><td colSpan="4" className="empty-msg">No expenses recorded yet.</td></tr>}
+                  {expenses.length === 0 && <tr><td colSpan="5" className="empty-msg">No expenses recorded yet.</td></tr>}
                 </tbody>
               </table>
             </div>
@@ -1383,13 +1443,17 @@ function App() {
         <div className="modal-overlay">
           <div className="modal-card">
             <div className="modal-header">
-              <h2>Add Property Expense</h2>
-              <button className="close-btn" onClick={() => setShowExpenseModal(false)}><X size={20}/></button>
+              <h2>{editingExpense ? 'Edit Property Expense' : 'Add Property Expense'}</h2>
+              <button className="close-btn" onClick={() => {
+                setShowExpenseModal(false);
+                setEditingExpense(null);
+                setExpenseData({ title: '', amount: '', category: 'Repair', date: new Date(), description: '' });
+              }}><X size={20}/></button>
             </div>
             <form onSubmit={handleRecordExpense}>
               <div className="form-group">
                 <label>Title</label>
-                <input required placeholder="e.g. Plumbing Repair" value={expenseData.title} onChange={e => setExpenseData({...expenseData, title: e.target.value})} />
+                <input required placeholder="e.g. Plumbing Repair" value={expenseData.title} onChange={e => setEditingExpense ? setExpenseData({...expenseData, title: e.target.value}) : setExpenseData({...expenseData, title: e.target.value})} />
               </div>
               <div className="form-grid">
                 <div className="form-group">
@@ -1411,7 +1475,7 @@ function App() {
                 <label>Date</label>
                 <DatePicker selected={expenseData.date} onChange={d => setExpenseData({...expenseData, date: d})} className="custom-select" />
               </div>
-              <button type="submit" className="btn-primary full-width">Save Expense</button>
+              <button type="submit" className="btn-primary full-width">{editingExpense ? 'Update Expense' : 'Save Expense'}</button>
             </form>
           </div>
         </div>

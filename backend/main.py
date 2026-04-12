@@ -404,11 +404,11 @@ async def update_tenant(tenant_id: str, tenant_update: schemas.TenantUpdate, db 
 async def create_payment(tenant_id: str, payment: schemas.PaymentCreate, db = Depends(get_database), current_user = Depends(auth.get_current_user)):
     payment_dict = prepare_mongo_data(payment.dict())
     payment_dict["tenant_id"] = tenant_id
-    
+    payment_dict["updated_at"] = datetime.utcnow()
+
     result = await db.payments.insert_one(payment_dict)
     payment_dict["_id"] = str(result.inserted_id)
     return payment_dict
-
 @app.get("/payments/{tenant_id}", response_model=List[schemas.Payment])
 async def read_payments(tenant_id: str, db = Depends(get_database), current_user = Depends(auth.get_current_user)):
     payments_cursor = db.payments.find({"tenant_id": tenant_id})
@@ -432,6 +432,30 @@ async def read_expenses(db = Depends(get_database), current_user = Depends(auth.
     for e in expenses:
         e["_id"] = str(e["_id"])
     return expenses
+
+@app.patch("/expense/{expense_id}", response_model=schemas.Expense)
+async def update_expense(expense_id: str, expense_update: schemas.ExpenseUpdate, db = Depends(get_database), current_user = Depends(auth.get_current_user)):
+    update_data = prepare_mongo_data(expense_update.dict(exclude_unset=True))
+    if not update_data:
+        raise HTTPException(status_code=400, detail="No fields to update")
+    
+    result = await db.expenses.find_one_and_update(
+        {"_id": ObjectId(expense_id)},
+        {"$set": update_data},
+        return_document=True
+    )
+    if not result:
+        raise HTTPException(status_code=404, detail="Expense not found")
+    
+    result["_id"] = str(result["_id"])
+    return result
+
+@app.delete("/expense/{expense_id}")
+async def delete_expense(expense_id: str, db = Depends(get_database), current_user = Depends(auth.get_current_user)):
+    result = await db.expenses.delete_one({"_id": ObjectId(expense_id)})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Expense not found")
+    return {"status": "deleted"}
 
 # Maintenance Endpoints
 @app.post("/maintenance", response_model=schemas.Maintenance)

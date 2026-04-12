@@ -177,6 +177,7 @@ async def read_payments(tenant_id: str, db = Depends(database.get_database), cur
 async def create_payment(tenant_id: str, payment: schemas.PaymentCreate, db = Depends(database.get_database), current_user = Depends(auth.get_current_user)):
     payment_dict = prepare_mongo_data(payment.dict())
     payment_dict["tenant_id"] = tenant_id
+    payment_dict["updated_at"] = datetime.utcnow()
     result = await db.payments.insert_one(payment_dict)
     payment_dict["_id"] = str(result.inserted_id)
     return payment_dict
@@ -212,6 +213,20 @@ async def get_expenses(db = Depends(database.get_database), current_user = Depen
     res = await db.expenses.find().to_list(100)
     for e in res: e["_id"] = str(e["_id"])
     return res
+
+@router.patch("/expense/{expense_id}", response_model=schemas.Expense)
+async def update_expense(expense_id: str, expense_update: schemas.ExpenseUpdate, db = Depends(database.get_database), current_user = Depends(auth.get_current_user)):
+    update_data = prepare_mongo_data(expense_update.dict(exclude_unset=True))
+    if not update_data: raise HTTPException(status_code=400, detail="No fields to update")
+    result = await db.expenses.find_one_and_update({"_id": ObjectId(expense_id)}, {"$set": update_data}, return_document=True)
+    if not result: raise HTTPException(status_code=404, detail="Expense not found")
+    result["_id"] = str(result["_id"])
+    return result
+
+@router.delete("/expense/{expense_id}")
+async def delete_expense(expense_id: str, db = Depends(database.get_database), current_user = Depends(auth.get_current_user)):
+    await db.expenses.delete_one({"_id": ObjectId(expense_id)})
+    return {"status": "deleted"}
 
 @router.post("/expense", response_model=schemas.Expense)
 async def create_expense(expense: schemas.ExpenseCreate, db = Depends(database.get_database), current_user = Depends(auth.get_current_user)):
