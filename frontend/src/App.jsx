@@ -1167,8 +1167,13 @@ function App() {
         {view === 'history' && (
           <div className="view-content fade-in">
             <button className="back-link" onClick={() => setView('dashboard')}>← Back to Dashboard</button>
-            <h1 className="page-title">Payment History: {selectedTenant?.name}</h1>
-            <div className="table-container">
+            <div className="section-header">
+              <h1 className="page-title">Payment History: {selectedTenant?.name}</h1>
+              <span className="room-tag">Room {selectedTenant?.room_number}</span>
+            </div>
+
+            {/* Desktop Table View */}
+            <div className="table-container desktop-only">
               <table className="modern-table">
                 <thead>
                   <tr>
@@ -1209,10 +1214,54 @@ function App() {
                     </tr>
                   ))}
                   {paymentHistory.length === 0 && (
-                    <tr><td colSpan="6" className="empty-msg">No payments recorded for this rental person.</td></tr>
+                    <tr><td colSpan="7" className="empty-msg">No payments recorded for this rental person.</td></tr>
                   )}
                 </tbody>
               </table>
+            </div>
+
+            {/* Mobile Card View */}
+            <div className="mobile-only history-cards">
+              {paymentHistory.sort((a,b) => new Date(b.date) - new Date(a.date)).map(payment => (
+                <div key={payment._id} className="history-mobile-card">
+                  <div className="hm-header">
+                    <span className="period-badge">{payment.month} {payment.year}</span>
+                    <span className={`status-badge ${payment.status}`}>{payment.status}</span>
+                  </div>
+                  <div className="hm-body">
+                    <div className="hm-row">
+                      <span>Date:</span>
+                      <strong>{payment.date}</strong>
+                    </div>
+                    <div className="hm-row">
+                      <span>Rent Paid:</span>
+                      <strong className="success-text">₹{payment.amount}</strong>
+                    </div>
+                    <div className="hm-row">
+                      <span>Electricity:</span>
+                      <strong>₹{payment.electricity_amount?.toFixed(2) || '0.00'}</strong>
+                    </div>
+                    {payment.current_reading > 0 && (
+                      <div className="hm-row readings">
+                        <span>Readings:</span>
+                        <p>{payment.initial_reading} → {payment.current_reading}</p>
+                      </div>
+                    )}
+                    <div className="hm-row">
+                      <span>Method:</span>
+                      <span className="method-badge">{payment.method || 'Cash'}</span>
+                    </div>
+                  </div>
+                  <div className="hm-footer">
+                    <button className="btn-primary full-width" onClick={() => shareOnWhatsApp(payment, selectedTenant)}>
+                      <Share2 size={16}/> Share Receipt
+                    </button>
+                  </div>
+                </div>
+              ))}
+              {paymentHistory.length === 0 && (
+                <div className="empty-msg">No payments recorded.</div>
+              )}
             </div>
           </div>
         )}
