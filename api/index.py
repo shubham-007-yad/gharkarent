@@ -89,7 +89,11 @@ async def read_tenants(status: Optional[str] = None, search: Optional[str] = Non
         query = {}
         if status and status != "All": query["status"] = status
         if search:
-            query["$or"] = [{"name": {"$regex": search, "$options": "i"}}, {"room_number": {"$regex": search, "$options": "i"}}]
+            query["$or"] = [
+                {"name": {"$regex": search, "$options": "i"}},
+                {"room_number": {"$regex": search, "$options": "i"}},
+                {"phone": {"$regex": search, "$options": "i"}}
+            ]
         
         cursor = db.tenants.find(query)
         tenants = await cursor.to_list(length=100)
@@ -127,7 +131,11 @@ async def export_tenants(status: Optional[str] = None, search: Optional[str] = N
         query = {}
         if status and status != "All": query["status"] = status
         if search:
-            query["$or"] = [{"name": {"$regex": search, "$options": "i"}}, {"room_number": {"$regex": search, "$options": "i"}}]
+            query["$or"] = [
+                {"name": {"$regex": search, "$options": "i"}},
+                {"room_number": {"$regex": search, "$options": "i"}},
+                {"phone": {"$regex": search, "$options": "i"}}
+            ]
         tenants = await db.tenants.find(query).to_list(1000)
         output = io.StringIO()
         writer = csv.writer(output)

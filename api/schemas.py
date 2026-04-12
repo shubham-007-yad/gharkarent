@@ -62,6 +62,7 @@ class PaymentBase(BaseModel):
     year: int 
     method: str = "Cash" 
     status: str
+    updated_at: Optional[datetime] = Field(default_factory=datetime.now)
 
 class PaymentCreate(PaymentBase):
     pass
@@ -123,6 +124,13 @@ class ExpenseBase(BaseModel):
 
 class ExpenseCreate(ExpenseBase):
     pass
+
+class ExpenseUpdate(BaseModel):
+    title: Optional[str] = None
+    amount: Optional[float] = None
+    category: Optional[str] = None
+    date: Optional[FlexibleDate] = None
+    description: Optional[str] = None
 
 class Expense(MongoBaseModel, ExpenseBase):
     pass
