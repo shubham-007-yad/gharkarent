@@ -143,6 +143,7 @@ class MaintenanceBase(BaseModel):
     notes: Optional[str] = None
     priority: str # Low, Medium, High
     status: str = "pending" # pending, in_progress, resolved
+    cost: Optional[float] = 0.0
     created_at: OptionalFlexibleDate
 
 class MaintenanceCreate(MaintenanceBase):
@@ -153,6 +154,7 @@ class MaintenanceUpdate(BaseModel):
     status: Optional[str] = None
     notes: Optional[str] = None
     priority: Optional[str] = None
+    cost: Optional[float] = None
 
 class Maintenance(MongoBaseModel, MaintenanceBase):
     pass

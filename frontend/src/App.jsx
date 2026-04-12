@@ -103,6 +103,7 @@ function App() {
     notes: '',
     priority: 'Medium',
     status: 'pending',
+    cost: '',
     created_at: new Date()
   })
   const [paymentData, setPaymentData] = useState({ 
@@ -451,18 +452,20 @@ function App() {
           issue: maintenanceData.issue,
           notes: maintenanceData.notes,
           priority: maintenanceData.priority,
-          status: maintenanceData.status
+          status: maintenanceData.status,
+          cost: parseFloat(maintenanceData.cost || 0)
         })
       } else {
         await apiRequest('post', '/maintenance', {
           ...maintenanceData,
+          cost: parseFloat(maintenanceData.cost || 0),
           created_at: maintenanceData.created_at.toISOString().split('T')[0]
         })
       }
       setShowMaintenanceModal(false)
       setEditingMaintenance(null)
       setMaintenanceData({
-        tenant_id: '', tenant_name: '', issue: '', notes: '', priority: 'Medium', status: 'pending', created_at: new Date()
+        tenant_id: '', tenant_name: '', issue: '', notes: '', priority: 'Medium', status: 'pending', cost: '', created_at: new Date()
       })
       fetchMaintenance()
     } catch (error) {
@@ -481,6 +484,7 @@ function App() {
       notes: '',
       priority: 'Medium',
       status: 'pending',
+      cost: '',
       created_at: new Date()
     })
     setShowMaintenanceModal(true)
@@ -496,6 +500,7 @@ function App() {
       notes: m.notes || '',
       priority: m.priority,
       status: m.status,
+      cost: m.cost || '',
       created_at: new Date(m.created_at)
     })
     setShowMaintenanceModal(true)
@@ -620,8 +625,15 @@ function App() {
   // Derive Recent Activity
   const formatRelativeTime = (dateString) => {
     if (!dateString) return 'N/A'
+    
+    // If the date string doesn't have a timezone, assume it's UTC
+    let utcString = dateString;
+    if (dateString.includes('T') && !dateString.endsWith('Z') && !dateString.includes('+')) {
+      utcString = `${dateString}Z`;
+    }
+
     const now = new Date()
-    const past = new Date(dateString)
+    const past = new Date(utcString)
     const diffInMs = now - past
     const diffInMins = Math.floor(diffInMs / (1000 * 60))
     const diffInHours = Math.floor(diffInMins / 60)
@@ -1030,7 +1042,10 @@ function App() {
                     <span className="m-date">{m.created_at}</span>
                   </div>
                   <h3>{m.issue}</h3>
-                  <p>Tenant: <strong>{m.tenant_name}</strong></p>
+                  <div className="m-details">
+                    <p>Tenant: <strong>{m.tenant_name}</strong></p>
+                    {m.cost > 0 && <p className="success-text"><strong>Cost:</strong> ₹{m.cost}</p>}
+                  </div>
                   {m.notes && <p className="m-notes"><strong>Note:</strong> {m.notes}</p>}
                   <div className="m-footer">
                      <span className={`status-badge ${m.status}`}>{m.status}</span>
@@ -1529,6 +1544,16 @@ function App() {
                   value={maintenanceData.issue}
                   onChange={e => setMaintenanceData({...maintenanceData, issue: e.target.value})}
                 ></textarea>
+              </div>
+              <div className="form-group">
+                <label>Fixing Cost (₹) - Optional</label>
+                <input 
+                  type="number"
+                  placeholder="0"
+                  className="custom-select"
+                  value={maintenanceData.cost}
+                  onChange={e => setMaintenanceData({...maintenanceData, cost: e.target.value})}
+                />
               </div>
               <div className="form-group">
                 <label>Additional Notes (for future reference)</label>
