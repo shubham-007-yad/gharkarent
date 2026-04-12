@@ -12,12 +12,16 @@ from bson import ObjectId
 import logging
 import os
 import shutil
+from dotenv import load_dotenv
 import cloudinary
 import cloudinary.uploader
 from cloudinary.utils import cloudinary_url
 
 import schemas, auth
 from database import get_database
+
+# Load environment variables
+load_dotenv()
 
 # Cloudinary Configuration
 cloudinary.config( 
@@ -28,6 +32,10 @@ cloudinary.config(
 )
 
 app = FastAPI()
+
+@app.get("/")
+async def root():
+    return {"message": "Welcome to Housely API", "status": "running"}
 
 # Mount uploads directory to serve files
 if not os.path.exists("uploads"):
@@ -42,6 +50,7 @@ logger = logging.getLogger(__name__)
 origins = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
+    "*", # Allow all for mobile testing
 ]
 
 # Enable CORS for React frontend
@@ -62,6 +71,8 @@ async def global_exception_handler(request: Request, exc: Exception):
         content={"detail": f"Internal Server Error: {str(exc)}"},
         headers={
             "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "*",
+            "Access-Control-Allow-Headers": "*",
         }
     )
 

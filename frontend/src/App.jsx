@@ -191,7 +191,8 @@ function App() {
       fetchTenants()
     } catch (error) {
       console.error('Error uploading document:', error)
-      alert("Error uploading document")
+      const detail = error.response?.data?.detail || "Error uploading document"
+      alert(detail)
     }
   }
 
@@ -909,7 +910,10 @@ function App() {
           <div className="view-content fade-in">
             <div className="section-header">
               <h1 className="page-title">Expense Management</h1>
-              <button className="btn-primary" onClick={() => setShowExpenseModal(true)}><Plus size={18}/> Add Expense</button>
+              <button className="btn-primary" onClick={() => {
+                setShowExpenseModal(true);
+                setSidebarOpen(false);
+              }}><Plus size={18}/> Add Expense</button>
             </div>
             <div className="table-container">
               <table className="modern-table">

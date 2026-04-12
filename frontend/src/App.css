@@ -497,7 +497,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 100;
+  z-index: 2000;
 }
 
 .modal-card {
@@ -1532,7 +1532,7 @@ body {
     top: 0;
     height: 100vh;
     transition: left 0.3s ease-out;
-    z-index: 200;
+    z-index: 1200;
     box-shadow: 10px 0 20px rgba(0,0,0,0.5);
   }
 
