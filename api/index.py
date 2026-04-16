@@ -45,8 +45,7 @@ async def health_check():
     return {
         "status": "ok",
         "database_connected": database.db is not None,
-        "db_error": database.db_error,
-        "env_keys": [k for k in os.environ.keys() if "URL" in k or "SECRET" in k or "KEY" in k or "NAME" in k]
+        "db_error": database.db_error
     }
 
 # --- AUTHENTICATION ---
