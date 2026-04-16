@@ -1,7 +1,7 @@
 import auth
 
 def test_auth():
-    password = "admin123"
+    password = "Admin@007"
     print(f"Testing with password: {password}")
     
     hashed = auth.get_password_hash(password)

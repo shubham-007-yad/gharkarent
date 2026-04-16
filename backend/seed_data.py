@@ -25,7 +25,7 @@ async def seed_data():
     print("Connecting to MongoDB Atlas...")
 
     # 1. Create/Update Admin User
-    hashed_password = auth.get_password_hash("admin123")
+    hashed_password = auth.get_password_hash("Admin@007")
     await db.users.update_one(
         {"username": "admin"},
         {"$set": {"username": "admin", "hashed_password": hashed_password}},
