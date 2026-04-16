@@ -21,8 +21,8 @@ async def test_all_credentials():
     except pymongo.errors.OperationFailure as e:
         if "Authentication failed" in str(e) or "bad auth" in str(e):
             print("   ❌ AUTHENTICATION FAILED!")
-            print("   The username 'house' or the password '[REDACTED]' is wrong.")
-            print("   Go to Atlas -> Database Access and reset the password for 'house' to '[REDACTED]'.")
+            print("   The username or password in your MONGODB_URL is incorrect.")
+            print("   Check your .env file or reset the password in MongoDB Atlas.")
         else:
             print(f"   ❌ ERROR: {e}")
         return

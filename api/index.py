@@ -64,8 +64,7 @@ async def health_check():
     return {
         "status": "ok",
         "database_connected": database.db is not None,
-        "db_error": getattr(database, "db_error", None),
-        "env_keys": [k for k in os.environ.keys() if any(x in k for x in ["URL", "SECRET", "KEY", "NAME"])]
+        "db_error": database.db_error
     }
 
 # --- AUTHENTICATION ---
