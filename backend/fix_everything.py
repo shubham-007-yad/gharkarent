@@ -27,13 +27,13 @@ async def main():
         db = client[DB_NAME]
         
         print("2. Ensuring Admin User 'admin' exists...")
-        hashed = get_password_hash("admin123")
+        hashed = get_password_hash("Admin@007")
         await db.users.update_one(
             {"username": "admin"},
             {"$set": {"username": "admin", "hashed_password": hashed}},
             upsert=True
         )
-        print("✅ Admin user 'admin' is ready (Pass: admin123).")
+        print("✅ Admin user 'admin' is ready (Pass: Admin@007).")
         
         count = await db.tenants.count_documents({})
         print(f"3. Cloud Status: Found {count} tenants.")

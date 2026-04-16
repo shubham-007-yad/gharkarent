@@ -30,4 +30,4 @@ async def create_admin_user(username, password):
     client.close()
 
 if __name__ == "__main__":
-    asyncio.run(create_admin_user("admin", "admin123"))
+    asyncio.run(create_admin_user("admin", "Admin@007"))
