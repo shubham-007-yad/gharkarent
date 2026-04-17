@@ -1309,12 +1309,20 @@ function App() {
                       <strong>{payment.date}</strong>
                     </div>
                     <div className="hm-row">
-                      <span>Rent Paid:</span>
-                      <strong className="success-text">₹{payment.amount}</strong>
+                      <span>Rent (Bill):</span>
+                      <strong>₹10,000</strong>
                     </div>
                     <div className="hm-row">
                       <span>Electricity:</span>
                       <strong>₹{payment.electricity_amount?.toFixed(2) || '0.00'}</strong>
+                    </div>
+                    <div className="hm-row">
+                      <span>Total Owed:</span>
+                      <strong className="danger-text">₹{payment.pending_amount?.toLocaleString()}</strong>
+                    </div>
+                    <div className="hm-row">
+                      <span>Submitted:</span>
+                      <strong className="success-text">₹{payment.amount}</strong>
                     </div>
                     {payment.current_reading > 0 && (
                       <div className="hm-row readings">
