@@ -1293,8 +1293,8 @@ function App() {
                       <td className="danger-text"><strong>₹{payment.pending_amount !== undefined ? payment.pending_amount.toLocaleString() : ( (selectedTenant?.rent_amount || 10000) + (payment.electricity_amount || 0)).toLocaleString()}</strong></td>
                       <td className="success-text">₹{payment.amount?.toLocaleString()}</td>
                       <td>
-                        <span className={`status-badge ${payment.status}`}>
-                          {payment.status}
+                        <span className={`status-badge ${payment.status === 'paid' ? 'success' : payment.status}`}>
+                          {payment.status === 'paid' ? 'Success' : payment.status.charAt(0).toUpperCase() + payment.status.slice(1)}
                         </span>
                       </td>
                     </tr>
@@ -1324,7 +1324,9 @@ function App() {
                 <div key={payment._id} className="history-mobile-card">
                   <div className="hm-header">
                     <span className="period-badge">{payment.month} {payment.year}</span>
-                    <span className={`status-badge ${payment.status}`}>{payment.status}</span>
+                    <span className={`status-badge ${payment.status === 'paid' ? 'success' : payment.status}`}>
+                      {payment.status === 'paid' ? 'Success' : payment.status.charAt(0).toUpperCase() + payment.status.slice(1)}
+                    </span>
                   </div>
                   <div className="hm-body">
                     <div className="hm-row">
@@ -1646,7 +1648,7 @@ function App() {
                     className={`toggle-btn ${paymentData.status === 'paid' ? 'active success' : ''}`}
                     onClick={() => setPaymentData({...paymentData, status: 'paid', pending_amount: 0})}
                   >
-                    <CheckCircle2 size={16}/> Fully Paid
+                    <CheckCircle2 size={16}/> Success
                   </button>
                   <button 
                     type="button" 
