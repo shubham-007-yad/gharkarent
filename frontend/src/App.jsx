@@ -1216,13 +1216,17 @@ function App() {
                  </div>
               </div>
 
-              <div className="record-side-column">
+                 <div className="record-side-column">
                  <div className="record-section">
                     <h3><History size={18}/> Payment Summary</h3>
                     <div className="payment-summary-stats">
                        <div className="summary-stat">
                           <p>Total Paid</p>
                           <h4 className="success-text">₹{selectedTenant?.payments?.reduce((acc, p) => acc + (p.amount || 0), 0).toLocaleString()}</h4>
+                       </div>
+                       <div className="summary-stat">
+                          <p>Total Outstanding</p>
+                          <h4 className="danger-text">₹{selectedTenant?.payments?.reduce((acc, p) => acc + (p.pending_amount || 0), 0).toLocaleString()}</h4>
                        </div>
                        <div className="summary-stat">
                           <p>Last Payment</p>
@@ -1277,7 +1281,7 @@ function App() {
                     <tr key={payment._id}>
                       <td><span className="period-badge">{payment.month} {payment.year}</span></td>
                       <td>{payment.date}</td>
-                      <td>₹10,000</td>
+                      <td>₹{selectedTenant?.rent_amount?.toLocaleString()}</td>
                       <td>
                         <div className="electricity-cell">
                           <strong>₹{payment.electricity_amount?.toFixed(2) || '0.00'}</strong>
@@ -1286,8 +1290,8 @@ function App() {
                           )}
                         </div>
                       </td>
-                      <td className="danger-text"><strong>₹{payment.pending_amount?.toLocaleString() || (10000 + (payment.electricity_amount || 0)).toLocaleString()}</strong></td>
-                      <td className="success-text">₹{payment.amount}</td>
+                      <td className="danger-text"><strong>₹{payment.pending_amount !== undefined ? payment.pending_amount.toLocaleString() : ( (selectedTenant?.rent_amount || 10000) + (payment.electricity_amount || 0)).toLocaleString()}</strong></td>
+                      <td className="success-text">₹{payment.amount?.toLocaleString()}</td>
                       <td>
                         <span className={`status-badge ${payment.status}`}>
                           {payment.status}
@@ -1303,7 +1307,7 @@ function App() {
                   <tfoot className="table-footer-summary">
                     <tr style={{backgroundColor: '#f8fafc', fontWeight: 'bold'}}>
                       <td colSpan="2">GRAND TOTAL</td>
-                      <td>₹{(paymentHistory.length * 10000).toLocaleString()}</td>
+                      <td>₹{(paymentHistory.length * (selectedTenant?.rent_amount || 10000)).toLocaleString()}</td>
                       <td>₹{paymentHistory.reduce((acc, p) => acc + (p.electricity_amount || 0), 0).toLocaleString()}</td>
                       <td className="danger-text">₹{paymentHistory.reduce((acc, p) => acc + (p.pending_amount || 0), 0).toLocaleString()}</td>
                       <td className="success-text">₹{paymentHistory.reduce((acc, p) => acc + (p.amount || 0), 0).toLocaleString()}</td>
@@ -1329,7 +1333,7 @@ function App() {
                     </div>
                     <div className="hm-row">
                       <span>Rent (Bill):</span>
-                      <strong>₹10,000</strong>
+                      <strong>₹{selectedTenant?.rent_amount?.toLocaleString()}</strong>
                     </div>
                     <div className="hm-row">
                       <span>Electricity:</span>
@@ -1341,7 +1345,7 @@ function App() {
                     </div>
                     <div className="hm-row">
                       <span>Submitted:</span>
-                      <strong className="success-text">₹{payment.amount}</strong>
+                      <strong className="success-text">₹{payment.amount?.toLocaleString()}</strong>
                     </div>
                     {payment.current_reading > 0 && (
                       <div className="hm-row readings">
