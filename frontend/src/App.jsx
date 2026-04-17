@@ -1258,11 +1258,11 @@ function App() {
                   <tr>
                     <th>For Period</th>
                     <th>Payment Date</th>
-                    <th>Submitted (Rent)</th>
+                    <th>Rent (Bill)</th>
                     <th>Electricity Bill</th>
+                    <th>Total Owed</th>
+                    <th>Submitted</th>
                     <th>Status</th>
-                    <th>Method</th>
-                    <th>Receipt</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1270,7 +1270,7 @@ function App() {
                     <tr key={payment._id}>
                       <td><span className="period-badge">{payment.month} {payment.year}</span></td>
                       <td>{payment.date}</td>
-                      <td className="success-text">₹{payment.amount}</td>
+                      <td>₹10,000</td>
                       <td>
                         <div className="electricity-cell">
                           <strong>₹{payment.electricity_amount?.toFixed(2) || '0.00'}</strong>
@@ -1279,16 +1279,12 @@ function App() {
                           )}
                         </div>
                       </td>
+                      <td className="danger-text"><strong>₹{payment.pending_amount?.toLocaleString() || (10000 + (payment.electricity_amount || 0)).toLocaleString()}</strong></td>
+                      <td className="success-text">₹{payment.amount}</td>
                       <td>
                         <span className={`status-badge ${payment.status}`}>
                           {payment.status}
                         </span>
-                      </td>
-                      <td><span className="method-badge">{payment.method || 'Cash'}</span></td>
-                      <td>
-                         <button className="icon-btn success" onClick={() => shareOnWhatsApp(payment, selectedTenant)}>
-                           <Share2 size={16}/> Receipt
-                         </button>
                       </td>
                     </tr>
                   ))}
