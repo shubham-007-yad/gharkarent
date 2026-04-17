@@ -1305,12 +1305,12 @@ function App() {
                 </tbody>
                 {paymentHistory.length > 0 && (
                   <tfoot className="table-footer-summary">
-                    <tr style={{backgroundColor: '#f8fafc', fontWeight: 'bold'}}>
-                      <td colSpan="2">GRAND TOTAL</td>
+                    <tr style={{backgroundColor: '#1e40af', color: 'white', fontWeight: 'bold', fontSize: '1.1rem'}}>
+                      <td colSpan="2" style={{padding: '15px'}}>GRAND TOTAL</td>
                       <td>₹{(paymentHistory.length * (selectedTenant?.rent_amount || 10000)).toLocaleString()}</td>
                       <td>₹{paymentHistory.reduce((acc, p) => acc + (p.electricity_amount || 0), 0).toLocaleString()}</td>
-                      <td className="danger-text">₹{paymentHistory.reduce((acc, p) => acc + (p.pending_amount || 0), 0).toLocaleString()}</td>
-                      <td className="success-text">₹{paymentHistory.reduce((acc, p) => acc + (p.amount || 0), 0).toLocaleString()}</td>
+                      <td style={{color: '#fca5a5'}}>₹{paymentHistory.reduce((acc, p) => acc + (p.pending_amount || 0), 0).toLocaleString()}</td>
+                      <td style={{color: '#86efac'}}>₹{paymentHistory.reduce((acc, p) => acc + (p.amount || 0), 0).toLocaleString()}</td>
                       <td></td>
                     </tr>
                   </tfoot>
