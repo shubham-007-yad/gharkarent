@@ -166,3 +166,6 @@ dist/
 # OS
 .DS_Store
 Thumbs.db
+
+# Tenant images
+rent image /
