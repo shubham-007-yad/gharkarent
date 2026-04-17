@@ -612,10 +612,17 @@ function App() {
 
   // Dashboard Stats Calculations
   const activeTenantsCount = tenants.filter(t => t.status === 'active').length
-  const leavingTenantsCount = tenants.filter(t => t.status === 'leaving').length
   const totalRentRevenue = tenants.reduce((acc, curr) => acc + (curr.rent_amount || 0), 0)
   const totalExpenses = expenses.reduce((acc, curr) => acc + (curr.amount || 0), 0)
-  const netProfit = totalRentRevenue - totalExpenses
+  
+  // NEW: Comprehensive calculations for the "system"
+  const totalCollected = tenants.reduce((acc, t) => 
+    acc + (t.payments?.reduce((pAcc, p) => pAcc + (p.amount || 0), 0) || 0), 0)
+  
+  const totalPending = tenants.reduce((acc, t) => 
+    acc + (t.payments?.reduce((pAcc, p) => pAcc + (p.pending_amount || 0), 0) || 0), 0)
+
+  const netProfit = totalCollected - totalExpenses
   
   // New Stats for KYC and Activity
   const totalDocuments = tenants.reduce((acc, curr) => acc + (curr.documents?.length || 0), 0)
@@ -836,28 +843,28 @@ function App() {
               <div className="stat-card">
                 <div className="stat-icon purple"><Users /></div>
                 <div className="stat-data">
-                  <p className="label">Total Persons</p>
-                  <h3>{tenants.length}</h3>
+                  <p className="label">Active Persons</p>
+                  <h3>{activeTenantsCount}</h3>
                 </div>
               </div>
               <div className="stat-card">
                 <div className="stat-icon green"><TrendingUp /></div>
                 <div className="stat-data">
-                  <p className="label">Monthly Revenue</p>
-                  <h3>₹{totalRentRevenue.toLocaleString()}</h3>
+                  <p className="label">Total Collected</p>
+                  <h3>₹{totalCollected.toLocaleString()}</h3>
                 </div>
               </div>
               <div className="stat-card">
-                <div className="stat-icon blue"><ShieldCheck /></div>
+                <div className="stat-icon orange"><AlertTriangle /></div>
                 <div className="stat-data">
-                  <p className="label">KYC Progress</p>
-                  <h3>{kycPercentage}% ({kycCompliantCount}/{tenants.length})</h3>
+                  <p className="label">Total Outstanding</p>
+                  <h3 className="danger-text">₹{totalPending.toLocaleString()}</h3>
                 </div>
               </div>
               <div className="stat-card">
-                <div className="stat-icon orange"><Receipt /></div>
+                <div className="stat-icon blue"><Receipt /></div>
                 <div className="stat-data">
-                  <p className="label">Net Profit (Est.)</p>
+                  <p className="label">Net Profit (Actual)</p>
                   <h3 className={netProfit >= 0 ? 'success-text' : 'danger-text'}>₹{netProfit.toLocaleString()}</h3>
                 </div>
               </div>
@@ -1292,6 +1299,18 @@ function App() {
                     <tr><td colSpan="7" className="empty-msg">No payments recorded for this rental person.</td></tr>
                   )}
                 </tbody>
+                {paymentHistory.length > 0 && (
+                  <tfoot className="table-footer-summary">
+                    <tr style={{backgroundColor: '#f8fafc', fontWeight: 'bold'}}>
+                      <td colSpan="2">GRAND TOTAL</td>
+                      <td>₹{(paymentHistory.length * 10000).toLocaleString()}</td>
+                      <td>₹{paymentHistory.reduce((acc, p) => acc + (p.electricity_amount || 0), 0).toLocaleString()}</td>
+                      <td className="danger-text">₹{paymentHistory.reduce((acc, p) => acc + (p.pending_amount || 0), 0).toLocaleString()}</td>
+                      <td className="success-text">₹{paymentHistory.reduce((acc, p) => acc + (p.amount || 0), 0).toLocaleString()}</td>
+                      <td></td>
+                    </tr>
+                  </tfoot>
+                )}
               </table>
             </div>
 
