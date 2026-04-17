@@ -1293,8 +1293,8 @@ function App() {
                       <td className="danger-text"><strong>₹{payment.pending_amount !== undefined ? payment.pending_amount.toLocaleString() : ( (selectedTenant?.rent_amount || 10000) + (payment.electricity_amount || 0)).toLocaleString()}</strong></td>
                       <td className="success-text">₹{payment.amount?.toLocaleString()}</td>
                       <td>
-                        <span className={`status-badge ${(payment.pending_amount === 0 || payment.status === 'paid') ? 'success' : (payment.amount > 0 ? 'partial' : 'pending')}`}>
-                          {(payment.pending_amount === 0 || payment.status === 'paid') ? 'Success' : (payment.amount > 0 ? 'Partial' : 'Pending')}
+                        <span className={`status-badge ${payment.amount >= ((selectedTenant?.rent_amount || 0) + (payment.electricity_amount || 0)) ? 'success' : (payment.amount > 0 ? 'partial' : 'pending')}`}>
+                          {payment.amount >= ((selectedTenant?.rent_amount || 0) + (payment.electricity_amount || 0)) ? 'Success' : (payment.amount > 0 ? 'Partial' : 'Pending')}
                         </span>
                       </td>
                     </tr>
@@ -1324,8 +1324,8 @@ function App() {
                 <div key={payment._id} className="history-mobile-card">
                   <div className="hm-header">
                     <span className="period-badge">{payment.month} {payment.year}</span>
-                    <span className={`status-badge ${(payment.pending_amount === 0 || payment.status === 'paid') ? 'success' : (payment.amount > 0 ? 'partial' : 'pending')}`}>
-                      {(payment.pending_amount === 0 || payment.status === 'paid') ? 'Success' : (payment.amount > 0 ? 'Partial' : 'Pending')}
+                    <span className={`status-badge ${payment.amount >= ((selectedTenant?.rent_amount || 0) + (payment.electricity_amount || 0)) ? 'success' : (payment.amount > 0 ? 'partial' : 'pending')}`}>
+                      {payment.amount >= ((selectedTenant?.rent_amount || 0) + (payment.electricity_amount || 0)) ? 'Success' : (payment.amount > 0 ? 'Partial' : 'Pending')}
                     </span>
                   </div>
                   <div className="hm-body">
