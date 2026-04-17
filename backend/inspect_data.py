@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 async def inspect_all_data():
-    MONGODB_URL = "mongodb+srv://house:Admin007@house.ehqplkm.mongodb.net/?retryWrites=true&w=majority&appName=house"
+    MONGODB_URL = os.getenv("MONGODB_URL")
     DATABASE_NAME = "house_db"
     
     client = AsyncIOMotorClient(MONGODB_URL)
