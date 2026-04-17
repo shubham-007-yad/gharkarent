@@ -189,6 +189,20 @@ async def create_payment(tenant_id: str, payment: schemas.PaymentCreate, db = De
     payment_dict["_id"] = str(result.inserted_id)
     return payment_dict
 
+@router.patch("/payment/{payment_id}", response_model=schemas.Payment)
+async def update_payment(payment_id: str, payment_update: schemas.PaymentUpdate, db = Depends(database.get_database), current_user = Depends(auth.get_current_user)):
+    update_data = prepare_mongo_data(payment_update.dict(exclude_unset=True))
+    update_data["updated_at"] = datetime.utcnow()
+    result = await db.payments.find_one_and_update({"_id": ObjectId(payment_id)}, {"$set": update_data}, return_document=True)
+    if not result: raise HTTPException(status_code=404, detail="Payment record not found")
+    result["_id"] = str(result["_id"])
+    return result
+
+@router.delete("/payment/{payment_id}")
+async def delete_payment(payment_id: str, db = Depends(database.get_database), current_user = Depends(auth.get_current_user)):
+    await db.payments.delete_one({"_id": ObjectId(payment_id)})
+    return {"status": "deleted"}
+
 # --- DOCUMENTS ---
 @router.post("/document/upload/{tenant_id}", response_model=schemas.Document)
 async def upload_document(tenant_id: str, name: str = Form(...), doc_type: str = Form(...), file: UploadFile = File(...), db = Depends(database.get_database), current_user = Depends(auth.get_current_user)):

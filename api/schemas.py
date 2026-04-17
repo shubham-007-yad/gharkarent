@@ -67,6 +67,19 @@ class PaymentBase(BaseModel):
 class PaymentCreate(PaymentBase):
     pass
 
+class PaymentUpdate(BaseModel):
+    amount: Optional[float] = None
+    pending_amount: Optional[float] = None
+    initial_reading: Optional[float] = None
+    current_reading: Optional[float] = None
+    rate_per_unit: Optional[float] = None
+    electricity_amount: Optional[float] = None
+    date: Optional[FlexibleDate] = None
+    month: Optional[str] = None
+    year: Optional[int] = None
+    method: Optional[str] = None
+    status: Optional[str] = None
+
 class Payment(MongoBaseModel, PaymentBase):
     tenant_id: str
 

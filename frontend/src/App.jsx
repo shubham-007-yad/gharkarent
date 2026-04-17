@@ -76,6 +76,7 @@ function App() {
   const [maintenance, setMaintenance] = useState([])
   const [showAddForm, setShowAddForm] = useState(false)
   const [showPayModal, setShowPayModal] = useState(false)
+  const [editingPayment, setEditingPayment] = useState(null)
   const [showLeavingModal, setShowLeavingModal] = useState(false)
   const [showExpenseModal, setShowExpenseModal] = useState(false)
   const [editingExpense, setEditingExpense] = useState(null)
@@ -349,33 +350,51 @@ function App() {
     }
   }
 
-  const openPayModal = (tenant) => {
+  const openPayModal = (tenant, payment = null) => {
     setSelectedTenant(tenant)
-    // Find last payment to get initial reading
-    const lastPayment = tenant.payments?.length > 0 
-      ? [...tenant.payments].sort((a,b) => new Date(b.date) - new Date(a.date))[0]
-      : null;
+    setEditingPayment(payment)
+    
+    if (payment) {
+      setPaymentData({ 
+        amount: payment.amount || '', 
+        pending_amount: payment.pending_amount || '',
+        initial_reading: payment.initial_reading || '',
+        current_reading: payment.current_reading || '',
+        rate_per_unit: payment.rate_per_unit || '10',
+        electricity_amount: payment.electricity_amount || 0,
+        date: new Date(payment.date),
+        month: payment.month,
+        year: payment.year,
+        method: payment.method || 'Cash',
+        status: payment.status
+      })
+    } else {
+      // Find last payment to get initial reading
+      const lastPayment = tenant.payments?.length > 0 
+        ? [...tenant.payments].sort((a,b) => new Date(b.date) - new Date(a.date))[0]
+        : null;
 
-    setPaymentData({ 
-      amount: tenant.rent_amount || '', 
-      pending_amount: '',
-      initial_reading: lastPayment?.current_reading || '',
-      current_reading: '',
-      rate_per_unit: '8', // You can make this configurable
-      electricity_amount: 0,
-      date: new Date(),
-      month: MONTHS[new Date().getMonth()],
-      year: new Date().getFullYear(),
-      method: 'Cash',
-      status: 'paid'
-    })
+      setPaymentData({ 
+        amount: tenant.rent_amount || '', 
+        pending_amount: '',
+        initial_reading: lastPayment?.current_reading || '',
+        current_reading: '',
+        rate_per_unit: '10', 
+        electricity_amount: 0,
+        date: new Date(),
+        month: MONTHS[new Date().getMonth()],
+        year: new Date().getFullYear(),
+        method: 'Cash',
+        status: 'paid'
+      })
+    }
     setShowPayModal(true)
   }
 
   const handleRecordPayment = async (e) => {
     e.preventDefault()
     try {
-      await apiRequest('post', `/payment/${selectedTenant._id}`, {
+      const data = {
         amount: parseFloat(paymentData.amount || 0),
         pending_amount: parseFloat(paymentData.pending_amount || 0),
         initial_reading: parseFloat(paymentData.initial_reading || 0),
@@ -387,12 +406,37 @@ function App() {
         year: parseInt(paymentData.year),
         method: paymentData.method,
         status: paymentData.status
-      })
+      }
+
+      if (editingPayment) {
+        await apiRequest('patch', `/payment/${editingPayment._id}`, data)
+        alert(`Payment record updated!`)
+      } else {
+        await apiRequest('post', `/payment/${selectedTenant._id}`, data)
+        alert(`New payment entry recorded!`)
+      }
+      
       setShowPayModal(false)
-      alert(`Payment entry recorded!`)
+      setEditingPayment(null)
       fetchTenants()
+      if (view === 'history') {
+        viewHistory(selectedTenant)
+      }
     } catch (error) {
       console.error('Error recording payment:', error)
+      alert('Error saving payment record')
+    }
+  }
+
+  const handleDeletePayment = async (paymentId) => {
+    if (!window.confirm("Are you sure you want to delete this payment record?")) return
+    try {
+      await apiRequest('delete', `/payment/${paymentId}`)
+      alert("Payment record deleted")
+      viewHistory(selectedTenant)
+      fetchTenants()
+    } catch (error) {
+      console.error('Error deleting payment:', error)
     }
   }
 
@@ -1272,8 +1316,9 @@ function App() {
                     <th>Rent (Bill)</th>
                     <th>Electricity Bill</th>
                     <th>Total Owed</th>
-                    <th>Submitted</th>
+                    <th>Amount Received</th>
                     <th>Status</th>
+                    <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1296,6 +1341,12 @@ function App() {
                         <span className={`status-badge ${payment.amount >= ((selectedTenant?.rent_amount || 0) + (payment.electricity_amount || 0)) ? 'success' : (payment.amount > 0 ? 'partial' : 'pending')}`}>
                           {payment.amount >= ((selectedTenant?.rent_amount || 0) + (payment.electricity_amount || 0)) ? 'Success' : (payment.amount > 0 ? 'Partial' : 'Pending')}
                         </span>
+                      </td>
+                      <td>
+                        <div className="row-actions">
+                          <button className="icon-btn-small" onClick={() => openPayModal(selectedTenant, payment)} title="Edit Payment"><Edit2 size={14}/></button>
+                          <button className="icon-btn-small danger" onClick={() => handleDeletePayment(payment._id)} title="Delete Payment"><Trash2 size={14}/></button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -1346,7 +1397,7 @@ function App() {
                       <strong className="danger-text">₹{payment.pending_amount?.toLocaleString()}</strong>
                     </div>
                     <div className="hm-row">
-                      <span>Submitted:</span>
+                      <span>Received:</span>
                       <strong className="success-text">₹{payment.amount?.toLocaleString()}</strong>
                     </div>
                     {payment.current_reading > 0 && (
@@ -1355,6 +1406,13 @@ function App() {
                         <p>{payment.initial_reading} → {payment.current_reading}</p>
                       </div>
                     )}
+                    <div className="hm-row">
+                      <span>Actions:</span>
+                      <div className="card-actions-small">
+                        <button className="text-btn primary" onClick={() => openPayModal(selectedTenant, payment)}>Edit</button>
+                        <button className="text-btn danger" onClick={() => handleDeletePayment(payment._id)}>Delete</button>
+                      </div>
+                    </div>
                     <div className="hm-row">
                       <span>Method:</span>
                       <span className="method-badge">{payment.method || 'Cash'}</span>
